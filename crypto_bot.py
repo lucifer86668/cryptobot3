@@ -89,8 +89,16 @@ async def main():
     # Schedule the periodic task
     asyncio.create_task(schedule_task())
 
-    # Run the bot until it is stopped
-    await application.idle()
+    # Replace `idle()` with a simple asyncio sleep loop
+    try:
+        while True:
+            await asyncio.sleep(3600)  # Sleep indefinitely in 1-hour intervals
+    except KeyboardInterrupt:
+        logging.info("Bot stopped.")
+
+    # Stop the application gracefully
+    await application.stop()
+    await application.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())
