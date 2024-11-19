@@ -1,6 +1,18 @@
 TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'  # Ваш токен от BotFather
 CHANNEL_LINK = 'https://t.me/+QJyC8NbFDbhkYTk6'  # Ссылка на ваш канал
 
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import (
+    Application,
+    CommandHandler,
+    CallbackQueryHandler,
+    ConversationHandler,
+    ContextTypes,
+)
+
+TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'  # Ваш токен от BotFather
+CHANNEL_LINK = 'https://t.me/+QJyC8NbFDbhkYTk6'  # Ссылка на ваш канал
+
 # Состояния
 AGE_CONFIRMATION, HUMAN_VERIFICATION = range(2)
 
