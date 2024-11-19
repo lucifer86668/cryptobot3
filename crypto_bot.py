@@ -7,7 +7,6 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 import logging
 
 # Settings
-#KDV
 TELEGRAM_BOT_TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
 CHAT_ID = '@QJyC8NbFDbhkYTk6'
 CRYPTO_API_URL = 'https://api.coingecko.com/api/v3/coins/markets'
