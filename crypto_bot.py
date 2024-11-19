@@ -1,12 +1,11 @@
 import requests
 import asyncio
-from telegram import Bot, Update
+from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import logging
 
 # Telegram Bot Settings
 TELEGRAM_BOT_TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
-CHAT_ID = '@QJyC8NbFDbhkYTk6'
 
 # Binance API URL
 BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price'
@@ -44,34 +43,11 @@ async def handle_crypto_price(update: Update, context: ContextTypes.DEFAULT_TYPE
     else:
         await update.message.reply_text(f"Could not fetch the price for {command}.")
 
-# Function to send morning update with predefined cryptocurrencies
-async def send_morning_update():
-    bot = Bot(token=TELEGRAM_BOT_TOKEN)
-    cryptos = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOTUSDT', 'ADAUSDT', 'APEUSDT', 'APTUSDT', 'ATOMUSDT']
-    message = "🌅 Morning Update:\n\n"
-    for crypto in cryptos:
-        price = get_price_from_binance(crypto)
-        if price != 'N/A':
-            message += f"{crypto[:-4]} - ${price:.2f}\n"
-    await bot.send_message(chat_id=CHAT_ID, text=message)
-    logging.info("Morning update sent.")
-
-# Async function to run the periodic task
-async def schedule_task():
-    while True:
-        now = asyncio.get_event_loop().time()
-        # Calculate the number of seconds until the next 10:00 AM
-        next_run = (60 * 60 * 10) - (now % (24 * 60 * 60))
-        if next_run <= 0:
-            next_run += 24 * 60 * 60  # Schedule for the next day
-        await asyncio.sleep(next_run)
-        await send_morning_update()
-
-# Start the bot with command handler
+# Main function
 async def main():
     application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # Add command handler for specific commands
+    # Add command handlers for specific tickers
     application.add_handler(CommandHandler("btc", handle_crypto_price))
     application.add_handler(CommandHandler("eth", handle_crypto_price))
     application.add_handler(CommandHandler("sol", handle_crypto_price))
@@ -86,10 +62,7 @@ async def main():
     await application.start()
     logging.info("Bot started. Waiting for commands...")
 
-    # Schedule the periodic task
-    asyncio.create_task(schedule_task())
-
-    # Replace `idle()` with a simple asyncio sleep loop
+    # Keep the bot running
     try:
         while True:
             await asyncio.sleep(3600)  # Sleep indefinitely in 1-hour intervals
