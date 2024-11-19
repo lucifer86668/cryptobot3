@@ -77,6 +77,10 @@ logging.info("Bot starting...")
 async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I'm your Crypto Bot. Use /sendtop20 to get the top 20 cryptocurrencies!")
 
+
+async def handle_start_test(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("test!")
+
 # Schedule the daily updates
 #def schedule_task():
 #    schedule.every().day.at("10:00").do(lambda: asyncio.run(send_crypto_update()))
@@ -98,8 +102,8 @@ async def main():
     logging.info("Bot started. Waiting for commands...")
 
     # Run the scheduler in the main loop
- #   try:
- #       schedule_task()
+    try:
+        handle_start_test()
     finally:
         await application.stop()
         await application.shutdown()
