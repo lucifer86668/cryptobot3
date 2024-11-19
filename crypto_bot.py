@@ -102,8 +102,8 @@ async def main():
 #    try:
 #        handle_start_test()
 #   finally:
-        await application.stop()
-        await application.shutdown()
+#        await application.stop()
+#        await application.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())
