@@ -1,7 +1,7 @@
-import requests
+import asyncio
 import schedule
 import time
-import asyncio
+from tvDatafeed import TvDatafeed, Interval
 from telegram import Bot, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import logging
@@ -9,14 +9,11 @@ import logging
 # Settings
 TELEGRAM_BOT_TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
 CHAT_ID = '@QJyC8NbFDbhkYTk6'
-CRYPTO_API_URL = 'https://api.coingecko.com/api/v3/coins/markets'
-BTC_DOMINANCE_URL = 'https://api.coingecko.com/api/v3/global'
-PARAMS = {
-    'vs_currency': 'usd',
-    'order': 'market_cap_desc',
-    'per_page': 20,
-    'page': 1,
-}
+USERNAME = ViktorMartuniyk  # Ваш логин от TradingView (None для анонимного входа)
+PASSWORD = hgyhgj2512  # Ваш пароль от TradingView
+
+# Initialize TradingView datafeed
+tv = TvDatafeed(USERNAME, PASSWORD)
 
 # Logging setup
 logging.basicConfig(
@@ -27,30 +24,35 @@ logging.basicConfig(
 
 logging.info("Bot starting...")
 
-# Function to get crypto data
-def get_crypto_data():
-    response = requests.get(CRYPTO_API_URL, params=PARAMS)
-    if response.status_code == 200:
-        return response.json()
-    return []
-
-# Function to get Bitcoin dominance
-def get_btc_dominance():
-    response = requests.get(BTC_DOMINANCE_URL)
-    if response.status_code == 200:
-        return response.json()['data']['market_cap_percentage']['btc']
-    return None
+# Function to get top 20 crypto data from TradingView
+def get_top_cryptos():
+    cryptos = [
+        "BTCUSDT", "ETHUSDT", "BNBUSDT", "XRPUSDT", "ADAUSDT",
+        "SOLUSDT", "DOGEUSDT", "DOTUSDT", "MATICUSDT", "LTCUSDT",
+        "SHIBUSDT", "TRXUSDT", "AVAXUSDT", "UNIUSDT", "ATOMUSDT",
+        "ETCUSDT", "XMRUSDT", "XLMUSDT", "BCHUSDT", "APTUSDT"
+    ]
+    data = []
+    for symbol in cryptos:
+        try:
+            # Fetch last price from TradingView
+            bars = tv.get_hist(symbol, "BINANCE", Interval.in_daily, n_bars=1)
+            if not bars.empty:
+                last_price = bars['close'].iloc[-1]
+                data.append((symbol, last_price))
+        except Exception as e:
+            logging.error(f"Error fetching data for {symbol}: {e}")
+    return data
 
 # Function to send updates to Telegram
 async def send_crypto_update():
     bot = Bot(token=TELEGRAM_BOT_TOKEN)
-    crypto_data = get_crypto_data()
-    btc_dominance = get_btc_dominance()
+    crypto_data = get_top_cryptos()
 
-    if crypto_data and btc_dominance is not None:
-        message = f"🌍 Bitcoin Dominance: {btc_dominance:.2f}%\n\nTop 20 Cryptocurrencies:\n"
-        for coin in crypto_data:
-            message += f"{coin['symbol'].upper()} ({coin['name']}): ${coin['current_price']:.2f}\n"
+    if crypto_data:
+        message = "🌍 Top 20 Cryptocurrencies (TradingView):\n\n"
+        for symbol, price in crypto_data:
+            message += f"{symbol}: ${price:.2f}\n"
         await bot.send_message(chat_id=CHAT_ID, text=message)
         logging.info("Crypto update sent to channel.")
     else:
@@ -60,13 +62,12 @@ async def send_crypto_update():
 # Command handler for /sendtop20
 async def handle_sendtop20(update: Update, context: ContextTypes.DEFAULT_TYPE):
     logging.info("Received /sendtop20 command.")
-    crypto_data = get_crypto_data()
-    btc_dominance = get_btc_dominance()
+    crypto_data = get_top_cryptos()
 
-    if crypto_data and btc_dominance is not None:
-        message = f"🌍 Bitcoin Dominance: {btc_dominance:.2f}%\n\nTop 20 Cryptocurrencies:\n"
-        for coin in crypto_data:
-            message += f"{coin['symbol'].upper()} ({coin['name']}): ${coin['current_price']:.2f}\n"
+    if crypto_data:
+        message = "🌍 Top 20 Cryptocurrencies (TradingView):\n\n"
+        for symbol, price in crypto_data:
+            message += f"{symbol}: ${price:.2f}\n"
         await context.bot.send_message(chat_id=CHAT_ID, text=message)
         await update.message.reply_text("Update sent to the channel.")
     else:
