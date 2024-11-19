@@ -1,7 +1,5 @@
 import requests
 import asyncio
-import schedule
-import time
 from telegram import Bot, Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 import logging
@@ -58,12 +56,16 @@ async def send_morning_update():
     await bot.send_message(chat_id=CHAT_ID, text=message)
     logging.info("Morning update sent.")
 
-# Schedule the morning update
-def schedule_task():
-    schedule.every().day.at("10:00").do(lambda: asyncio.run(send_morning_update()))
+# Async function to run the periodic task
+async def schedule_task():
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        now = asyncio.get_event_loop().time()
+        # Calculate the number of seconds until the next 10:00 AM
+        next_run = (60 * 60 * 10) - (now % (24 * 60 * 60))
+        if next_run <= 0:
+            next_run += 24 * 60 * 60  # Schedule for the next day
+        await asyncio.sleep(next_run)
+        await send_morning_update()
 
 # Start the bot with command handler
 async def main():
@@ -84,12 +86,11 @@ async def main():
     await application.start()
     logging.info("Bot started. Waiting for commands...")
 
-    # Run the scheduler in the main loop
-    try:
-        schedule_task()
-    finally:
-        await application.stop()
-        await application.shutdown()
+    # Schedule the periodic task
+    asyncio.create_task(schedule_task())
+
+    # Run the bot until it is stopped
+    await application.idle()
 
 if __name__ == "__main__":
     asyncio.run(main())
