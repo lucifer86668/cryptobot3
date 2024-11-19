@@ -98,8 +98,8 @@ async def main():
     logging.info("Bot started. Waiting for commands...")
 
     # Run the scheduler in the main loop
-    try:
-        schedule_task()
+ #   try:
+ #       schedule_task()
     finally:
         await application.stop()
         await application.shutdown()
