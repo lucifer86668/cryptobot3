@@ -1,89 +1,95 @@
-TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'  # Ваш токен от BotFather
-CHANNEL_LINK = 'https://t.me/+QJyC8NbFDbhkYTk6'  # Ссылка на ваш канал
+import requests
+import asyncio
+import schedule
+import time
+from telegram import Bot, Update
+from telegram.ext import Application, CommandHandler, ContextTypes
+import logging
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    Application,
-    CommandHandler,
-    CallbackQueryHandler,
-    ConversationHandler,
-    ContextTypes,
+# Telegram Bot Settings
+TELEGRAM_BOT_TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
+CHAT_ID = '@QJyC8NbFDbhkYTk6'
+
+# Binance API URL
+BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price'
+
+# Logging setup
+logging.basicConfig(
+    filename="bot.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s"
 )
 
-TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'  # Ваш токен от BotFather
-CHANNEL_LINK = 'https://t.me/+QJyC8NbFDbhkYTk6'  # Ссылка на ваш канал
+logging.info("Bot starting...")
 
-# Состояния
-AGE_CONFIRMATION, HUMAN_VERIFICATION = range(2)
+# Function to get the price of a cryptocurrency from Binance
+def get_price_from_binance(symbol):
+    try:
+        response = requests.get(BINANCE_API_URL, params={'symbol': symbol})
+        if response.status_code == 200:
+            data = response.json()
+            return float(data['price'])
+        else:
+            logging.error(f"Error fetching data for {symbol}: {response.status_code}")
+            return 'N/A'
+    except Exception as e:
+        logging.error(f"Exception fetching price for {symbol}: {e}")
+        return 'N/A'
 
-# Стартовое сообщение
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Welcome! To proceed, you need to verify a few things.\n"
-        "Step 1: Confirm that you are over 18 years old."
-    )
-    keyboard = [[InlineKeyboardButton("I am over 18", callback_data='over_18')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Click the button below to confirm:", reply_markup=reply_markup)
-    return AGE_CONFIRMATION
-
-# Проверка возраста
-async def age_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == 'over_18':
-        await query.edit_message_text(
-            text="✅ Thank you for confirming! Now, please verify that you are human."
-        )
-        keyboard = [[InlineKeyboardButton("I am human", callback_data='human')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("Click the button below to confirm:", reply_markup=reply_markup)
-        return HUMAN_VERIFICATION
+# Function to handle commands with cryptocurrency tickers
+async def handle_crypto_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    command = update.message.text.strip()[1:].upper()  # Remove the '/' and convert to uppercase
+    ticker = command + "USDT"  # Binance format
+    price = get_price_from_binance(ticker)
+    if price != 'N/A':
+        await update.message.reply_text(f"{command} - ${price:.2f}")
     else:
-        await query.edit_message_text(text="❌ You must confirm your age to proceed.")
-        return AGE_CONFIRMATION
+        await update.message.reply_text(f"Could not fetch the price for {command}.")
 
-# Проверка "человек ли"
-async def human_verification(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == 'human':
-        await query.edit_message_text(
-            text="✅ Verification complete! Click the button below to join the channel."
-        )
-        keyboard = [[InlineKeyboardButton("Join the Channel", url=CHANNEL_LINK)]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("Click below:", reply_markup=reply_markup)
-        return ConversationHandler.END
-    else:
-        await query.edit_message_text(text="❌ Verification failed. Please try again.")
-        return HUMAN_VERIFICATION
+# Function to send morning update with predefined cryptocurrencies
+async def send_morning_update():
+    bot = Bot(token=TELEGRAM_BOT_TOKEN)
+    cryptos = ['BTCUSDT', 'ETHUSDT', 'SOLUSDT', 'DOTUSDT', 'ADAUSDT', 'APEUSDT', 'APTUSDT', 'ATOMUSDT']
+    message = "🌅 Morning Update:\n\n"
+    for crypto in cryptos:
+        price = get_price_from_binance(crypto)
+        if price != 'N/A':
+            message += f"{crypto[:-4]} - ${price:.2f}\n"
+    await bot.send_message(chat_id=CHAT_ID, text=message)
+    logging.info("Morning update sent.")
 
-# Отмена
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Verification process canceled.")
-    return ConversationHandler.END
+# Schedule the morning update
+def schedule_task():
+    schedule.every().day.at("10:00").do(lambda: asyncio.run(send_morning_update()))
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
-# Основной блок
-def main():
-    # Создаём приложение
-    application = Application.builder().token(TOKEN).build()
+# Start the bot with command handler
+async def main():
+    application = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            AGE_CONFIRMATION: [CallbackQueryHandler(age_confirmation)],
-            HUMAN_VERIFICATION: [CallbackQueryHandler(human_verification)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
+    # Add command handler for specific commands
+    application.add_handler(CommandHandler("btc", handle_crypto_price))
+    application.add_handler(CommandHandler("eth", handle_crypto_price))
+    application.add_handler(CommandHandler("sol", handle_crypto_price))
+    application.add_handler(CommandHandler("dot", handle_crypto_price))
+    application.add_handler(CommandHandler("ada", handle_crypto_price))
+    application.add_handler(CommandHandler("ape", handle_crypto_price))
+    application.add_handler(CommandHandler("apt", handle_crypto_price))
+    application.add_handler(CommandHandler("atom", handle_crypto_price))
 
-    # Добавляем обработчик в приложение
-    application.add_handler(conv_handler)
+    # Initialize and start the application
+    await application.initialize()
+    await application.start()
+    logging.info("Bot started. Waiting for commands...")
 
-    # Запускаем приложение
-    application.run_polling()
+    # Run the scheduler in the main loop
+    try:
+        schedule_task()
+    finally:
+        await application.stop()
+        await application.shutdown()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    asyncio.run(main())
