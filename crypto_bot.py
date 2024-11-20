@@ -8,38 +8,24 @@ TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Hello! I'm working.")
 
-# Главная функция для запуска бота
+# Главная функция
 async def main():
-    # Создаём приложение Telegram
     application = Application.builder().token(TOKEN).build()
-
-    # Регистрируем обработчик команды /start
     application.add_handler(CommandHandler("start", start))
 
-    # Запускаем бота
+    # Запуск приложения
     await application.initialize()
     await application.start()
     print("Bot is running. Press Ctrl+C to stop.")
 
-    # Поддержание работы бота через бесконечный асинхронный цикл
+    # Поддержание работы бота
     try:
         while True:
-            await asyncio.sleep(3600)  # Проверка раз в час
+            await asyncio.sleep(3600)
     except KeyboardInterrupt:
         print("Bot stopped manually.")
-
-    # Корректное завершение работы бота
-    await application.stop()
-    await application.shutdown()
-
-from telegram.ext import MessageHandler, filters
-
-# Логирование всех входящих сообщений
-async def log_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"Received update: {update.to_dict()}")
-
-# Добавьте обработчик в main():
-application.add_handler(MessageHandler(filters.ALL, log_update))
+        await application.stop()
+        await application.shutdown()
 
 if __name__ == "__main__":
     asyncio.run(main())
