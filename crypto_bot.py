@@ -62,16 +62,8 @@ async def main():
     await application.start()
     logging.info("Bot started. Waiting for commands...")
 
-    # Keep the bot running
-    try:
-        while True:
-            await asyncio.sleep(3600)  # Sleep indefinitely in 1-hour intervals
-    except KeyboardInterrupt:
-        logging.info("Bot stopped.")
-
-    # Stop the application gracefully
-    await application.stop()
-    await application.shutdown()
+    # Use application.idle() to safely handle the loop
+    await application.idle()
 
 if __name__ == "__main__":
     asyncio.run(main())
