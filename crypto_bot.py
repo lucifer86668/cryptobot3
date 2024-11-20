@@ -32,5 +32,14 @@ async def main():
     await application.stop()
     await application.shutdown()
 
+from telegram.ext import MessageHandler, filters
+
+# Логирование всех входящих сообщений
+async def log_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"Received update: {update.to_dict()}")
+
+# Добавьте обработчик в main():
+application.add_handler(MessageHandler(filters.ALL, log_update))
+
 if __name__ == "__main__":
     asyncio.run(main())
