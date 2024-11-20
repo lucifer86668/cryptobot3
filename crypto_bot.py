@@ -1,77 +1,52 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes, ConversationHandler
+import requests
+from telegram import Update
+from telegram.ext import Application, CommandHandler, ContextTypes
 
-TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'  # Ваш токен от BotFather
-CHANNEL_LINK = 'https://t.me/+QJyC8NbFDbhkYTk6'  # Ссылка на ваш канал
+# Telegram Bot Token
+TOKEN = '7417257593:AAE75GK41akngDHtBbR8c8MciVwPlKMg6yQ'
 
-# Состояния
-AGE_CONFIRMATION, HUMAN_VERIFICATION = range(2)
+# Binance API URL
+BINANCE_API_URL = 'https://api.binance.com/api/v3/ticker/price'
 
-# Стартовое сообщение
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "👋 Welcome! To proceed, you need to verify a few things.\n"
-        "Step 1: Confirm that you are over 18 years old."
-    )
-    keyboard = [[InlineKeyboardButton("I am over 18", callback_data='over_18')]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("Click the button below to confirm:", reply_markup=reply_markup)
-    return AGE_CONFIRMATION
+# Функция для получения цены из Binance API
+def get_price_from_binance(symbol: str):
+    try:
+        response = requests.get(BINANCE_API_URL, params={'symbol': symbol})
+        response.raise_for_status()
+        data = response.json()
+        return float(data['price'])
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching data for {symbol}: {e}")
+        return None
 
-# Проверка возраста
-async def age_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == 'over_18':
-        await query.edit_message_text(
-            text="✅ Thank you for confirming! Now, please verify that you are human."
-        )
-        keyboard = [[InlineKeyboardButton("I am human", callback_data='human')]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("Click the button below to confirm:", reply_markup=reply_markup)
-        return HUMAN_VERIFICATION
+# Обработчик команды для получения цены
+async def handle_crypto_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    # Получаем команду без символа '/'
+    command = update.message.text.strip()[1:].upper()  # Пример: '/btc' -> 'BTC'
+    ticker = f"{command}USDT"  # Формируем тикер для Binance (например, BTCUSDT)
+    
+    # Запрашиваем цену
+    price = get_price_from_binance(ticker)
+
+    if price is not None:
+        await update.message.reply_text(f"💰 {command} - ${price:.2f}")
     else:
-        await query.edit_message_text(text="❌ You must confirm your age to proceed.")
-        return AGE_CONFIRMATION
+        await update.message.reply_text(f"❌ Could not fetch the price for {command}. Please check the ticker.")
 
-# Проверка "человек ли"
-async def human_verification(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == 'human':
-        await query.edit_message_text(
-            text="✅ Verification complete! Click the button below to join the channel."
-        )
-        keyboard = [[InlineKeyboardButton("Join the Channel", url=CHANNEL_LINK)]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await query.message.reply_text("Click below:", reply_markup=reply_markup)
-        return ConversationHandler.END
-    else:
-        await query.edit_message_text(text="❌ Verification failed. Please try again.")
-        return HUMAN_VERIFICATION
-
-# Отмена
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❌ Verification process canceled.")
-    return ConversationHandler.END
-
-# Основной блок
+# Главная функция
 def main():
-    # Создаём приложение
+    # Создаём приложение Telegram
     application = Application.builder().token(TOKEN).build()
 
-    # ConversationHandler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler('start', start)],
-        states={
-            AGE_CONFIRMATION: [CallbackQueryHandler(age_confirmation)],
-            HUMAN_VERIFICATION: [CallbackQueryHandler(human_verification)],
-        },
-        fallbacks=[CommandHandler('cancel', cancel)],
-    )
-
-    # Добавляем обработчик в приложение
-    application.add_handler(conv_handler)
+    # Регистрируем обработчики для криптовалют
+    application.add_handler(CommandHandler("btc", handle_crypto_price))  # Для Bitcoin
+    application.add_handler(CommandHandler("eth", handle_crypto_price))  # Для Ethereum
+    application.add_handler(CommandHandler("sol", handle_crypto_price))  # Для Solana
+    application.add_handler(CommandHandler("dot", handle_crypto_price))  # Для Polkadot
+    application.add_handler(CommandHandler("ada", handle_crypto_price))  # Для Cardano
+    application.add_handler(CommandHandler("ape", handle_crypto_price))  # Для ApeCoin
+    application.add_handler(CommandHandler("apt", handle_crypto_price))  # Для Aptos
+    application.add_handler(CommandHandler("atom", handle_crypto_price))  # Для Cosmos
 
     # Запускаем приложение
     application.run_polling()
