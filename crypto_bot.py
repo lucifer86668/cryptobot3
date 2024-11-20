@@ -24,6 +24,22 @@ async def handle_crypto_price(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Получаем команду без символа '/'
     command = update.message.text.strip()[1:].upper()  # Пример: '/btc' -> 'BTC'
     ticker = f"{command}USDT"  # Формируем тикер для Binance (например, BTCUSDT)
+
+from telegram.ext import MessageHandler, filters
+
+# Фильтр для команд в канале
+async def handle_channel_commands(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    command = update.message.text.strip()[1:].split('@')[0].upper()  # Извлекаем команду без '@'
+    ticker = f"{command}USDT"
+    price = get_price_from_binance(ticker)
+
+    if price is not None:
+        await update.message.reply_text(f"💰 {command} - ${price:.2f}")
+    else:
+        await update.message.reply_text(f"❌ Could not fetch the price for {command}. Please check the ticker.")
+
+# Добавляем обработчик
+application.add_handler(MessageHandler(filters.ChatType.CHANNEL & filters.COMMAND, handle_channel_commands))
     
     # Запрашиваем цену
     price = get_price_from_binance(ticker)
